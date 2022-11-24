@@ -18,21 +18,37 @@ def home(request):
      Third way seemed more logical to me. So I have implented that one.
     """
 
-    quary_set = Reservation.objects.raw("SELECT A.id, A.checkin, A.checkout, "+
-        "(SELECT B.name FROM home_rental B WHERE B.id = A.rental_id LIMIT 1) as rental_name, "+
-        "(SELECT C.id FROM home_reservation C "+
-        "WHERE C.rental_id = A.rental_id AND C.checkout <= A.checkin ORDER BY C.checkout DESC LIMIT 1) as prev_reservation_id "+
-        "FROM home_reservation A ORDER BY A.rental_id")
 
+    reservations = Reservation.objects.all().order_by("rental_id")
     reservation_info = []
-    for quary in quary_set:
+    for single_reservation in reservations:
+        prev_reservation = Reservation.objects.filter(rental = single_reservation.rental).filter(checkout__lte = single_reservation.checkin).order_by("-checkout").first()
+
         reservation_info.append({
-            "id" : quary.id,
-            "rental" : quary.rental_name,
-            "checkin": '{:%Y-%m-%d}'.format(quary.checkin),
-            "checkout": '{:%Y-%m-%d}'.format(quary.checkout),   
-            "prev_reservation_id": quary.prev_reservation_id if (quary.prev_reservation_id != None) else "N/A" 
+            "id" : single_reservation.id,
+            "rental" : single_reservation.rental.name,
+            "checkin": '{:%Y-%m-%d}'.format(single_reservation.checkin),
+            "checkout": '{:%Y-%m-%d}'.format(single_reservation.checkout),   
+            "prev_reservation_id": prev_reservation.id if (prev_reservation != None) else "N/A" 
         })
+
+    # quary_set = Reservation.objects.raw("SELECT A.id, A.checkin, A.checkout, "+
+    #     "(SELECT B.name FROM home_rental B WHERE B.id = A.rental_id LIMIT 1) as rental_name, "+
+    #     "(SELECT C.id FROM home_reservation C "+
+    #     "WHERE C.rental_id = A.rental_id AND C.checkout <= A.checkin ORDER BY C.checkout DESC LIMIT 1) as prev_reservation_id "+
+    #     "FROM home_reservation A ORDER BY A.rental_id")
+
+    
+
+    # reservation_info = []
+    # for quary in quary_set:
+    #     reservation_info.append({
+    #         "id" : quary.id,
+    #         "rental" : quary.rental_name,
+    #         "checkin": '{:%Y-%m-%d}'.format(quary.checkin),
+    #         "checkout": '{:%Y-%m-%d}'.format(quary.checkout),   
+    #         "prev_reservation_id": quary.prev_reservation_id if (quary.prev_reservation_id != None) else "N/A" 
+    #     })
 
     return JsonResponse(reservation_info, safe=False)
 
